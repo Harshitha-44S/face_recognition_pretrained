@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            padding-top: 50px;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            background: rgba(255,255,255,0.95);
+            margin-bottom: 30px;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 20px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .upload-area:hover {
+            background: #f0f0ff;
+            border-color: #764ba2;
+        }
+        .upload-area i {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        #preview {
+            max-width: 100%;
+            max-height: 300px;
+            margin: 20px auto;
+            display: none;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .result-card {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+        .team-member {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .non-human {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .unknown {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .stats-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .stats-number {
+            font-size: 36px;
+            font-weight: bold;
+        }
+        .stats-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .confidence-bar {
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            border-radius: 5px;
+            transition: width 0.3s;
+        }
+        .nav-tabs {
+            margin-bottom: 20px;
+        }
+        .btn-action {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: transform 0.3s;
+        }
+        .btn-action:hover {
+            transform: scale(1.05);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <ul class="nav nav-tabs justify-content-center" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home" type="button" role="tab">🏠 Home</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats" type="button" role="tab">📊 Statistics</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="add-tab" data-bs-toggle="tab" data-bs-target="#add" type="button" role="tab">👥 Add Member</button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="myTabContent">
+            <!-- Home Tab -->
+            <div class="tab-pane fade show active" id="home" role="tabpanel">
+                <div class="card">
+                    <div class="card-header text-center">
+                        🔍 Face Recognition System
+                    </div>
+                    <div class="card-body">
+                        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                            <i class="bi bi-cloud-upload"></i>
+                            <h4>Click to upload or drag and drop</h4>
+                            <p class="text-muted">Supported formats: JPG, PNG, JPEG</p>
+                            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                        </div>
+                        
+                        <img id="preview" src="#" alt="Preview">
+                        
+                        <div class="loader" id="loader"></div>
+                        
+                        <div id="result" class="result-card" style="display: none;">
+                            <h4 class="text-center mb-4">Recognition Results</h4>
+                            <div id="resultContent"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Tab -->
+            <div class="tab-pane fade" id="stats" role="tabpanel">
+                <div class="card">
+                    <div class="card-header text-center">
+                        📊 System Statistics
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="statsContent">
+                            <div class="col-md-4">
+                                <div class="stats-box text-center">
+                                    <div class="stats-number" id="totalFaces">0</div>
+                                    <div class="stats-label">Total Faces</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stats-box text-center">
+                                    <div class="stats-number" id="teamMembers">0</div>
+                                    <div class="stats-label">Team Members</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stats-box text-center">
+                                    <div class="stats-number" id="otherPersons">0</div>
+                                    <div class="stats-label">Other Persons</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h5>Team Members List</h5>
+                            <div id="membersList" class="list-group"></div>
+                        </div>
+                        
+                        <button class="btn-action mt-4 w-100" onclick="reloadModel()">🔄 Reload Model</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Member Tab -->
+            <div class="tab-pane fade" id="add" role="tabpanel">
+                <div class="card">
+                    <div class="card-header text-center">
+                        👥 Add New Team Member
+                    </div>
+                    <div class="card-body">
+                        <form id="addMemberForm">
+                            <div class="mb-3">
+                                <label for="memberName" class="form-label">Member Name</label>
+                                <input type="text" class="form-control" id="memberName" required>
+                            </div>
+                            
+                            <div class="upload-area mb-3" onclick="document.getElementById('memberImage').click()">
+                                <i class="bi bi-cloud-upload"></i>
+                                <h5>Click to upload member photo</h5>
+                                <p class="text-muted">Clear, front-facing photo works best</p>
+                                <input type="file" id="memberImage" accept="image/*" style="display: none;" required>
+                            </div>
+                            
+                            <img id="memberPreview" src="#" alt="Preview" style="max-width: 100%; max-height: 200px; margin: 10px auto; display: none; border-radius: 10px;">
+                            
+                            <div id="addResult" class="alert" style="display: none;"></div>
+                            
+                            <button type="submit" class="btn-action w-100">➕ Add Member</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // File input handling
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('preview').src = e.target.result;
+                    document.getElementById('preview').style.display = 'block';
+                    recognizeImage(file);
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Member image preview
+        document.getElementById('memberImage').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('memberPreview').src = e.target.result;
+                    document.getElementById('memberPreview').style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Recognize image function
+        async function recognizeImage(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+
+            try {
+                const response = await fetch('/recognize', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error processing image');
+            } finally {
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+
+        // Display results
+        function displayResults(data) {
+            const resultDiv = document.getElementById('result');
+            const resultContent = document.getElementById('resultContent');
+            
+            let html = '';
+            
+            if (data.status === 'SUCCESS' && data.results.length > 0) {
+                data.results.forEach((face, index) => {
+                    let resultClass = '';
+                    let resultText = '';
+                    
+                    if (face.result.startsWith('TEAM_MEMBER')) {
+                        resultClass = 'team-member';
+                        resultText = `✅ Team Member: ${face.result.replace('TEAM_MEMBER_', '')}`;
+                    } else if (face.result === 'UNKNOWN_PERSON') {
+                        resultClass = 'unknown';
+                        resultText = '⚠️ Unknown Person';
+                    } else if (face.result.startsWith('OTHER_PERSON')) {
+                        resultClass = 'unknown';
+                        resultText = `👤 Other: ${face.result.replace('OTHER_PERSON_', '')}`;
+                    } else {
+                        resultClass = 'non-human';
+                        resultText = '❌ Non-Human/Object';
+                    }
+                    
+                    html += `
+                        <div class="mb-3">
+                            <h5 class="${resultClass}">${resultText}</h5>
+                            <p>Confidence: ${(face.confidence * 100).toFixed(1)}%</p>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" style="width: ${face.confidence * 100}%"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `<p class="text-muted mt-3">${data.message}</p>`;
+            } else if (data.status === 'NO_FACE') {
+                html = '<h5 class="non-human">❌ No face detected in image</h5>';
+            } else {
+                html = '<h5 class="unknown">⚠️ Could not process image</h5>';
+            }
+            
+            resultContent.innerHTML = html;
+            resultDiv.style.display = 'block';
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch('/stats');
+                const data = await response.json();
+                
+                document.getElementById('totalFaces').textContent = data.total_faces;
+                document.getElementById('teamMembers').textContent = data.team_members;
+                document.getElementById('otherPersons').textContent = data.other_persons;
+                
+                let membersHtml = '';
+                for (let i = 0; i < data.names.length; i++) {
+                    const type = data.types[i] === 'team' ? '✅ Team' : '👤 Other';
+                    membersHtml += `
+                        <div class="list-group-item">
+                            ${type}: ${data.names[i]}
+                        </div>
+                    `;
+                }
+                document.getElementById('membersList').innerHTML = membersHtml || '<p class="text-muted">No members added yet</p>';
+                
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Reload model
+        async function reloadModel() {
+            try {
+                const response = await fetch('/reload-model');
+                const data = await response.json();
+                alert(data.message);
+                loadStats();
+            } catch (error) {
+                console.error('Error reloading model:', error);
+            }
+        }
+
+        // Add member form
+        document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('memberName').value;
+            const file = document.getElementById('memberImage').files[0];
+            
+            if (!name || !file) {
+                alert('Please provide both name and image');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('image', file);
+            
+            try {
+                const response = await fetch('/add-team-member', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                const resultDiv = document.getElementById('addResult');
+                
+                if (data.success) {
+                    resultDiv.className = 'alert alert-success';
+                    resultDiv.textContent = data.message;
+                    resultDiv.style.display = 'block';
+                    
+                    // Clear form
+                    document.getElementById('memberName').value = '';
+                    document.getElementById('memberImage').value = '';
+                    document.getElementById('memberPreview').style.display = 'none';
+                    
+                    // Reload stats
+                    loadStats();
+                    
+                    // Switch to home tab after 2 seconds
+                    setTimeout(() => {
+                        document.getElementById('home-tab').click();
+                    }, 2000);
+                } else {
+                    resultDiv.className = 'alert alert-danger';
+                    resultDiv.textContent = data.message;
+                    resultDiv.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error adding member:', error);
+            }
+        });
+
+        // Load stats when stats tab is shown
+        document.getElementById('stats-tab').addEventListener('click', loadStats);
+    </script>
+</body>
+</html>
